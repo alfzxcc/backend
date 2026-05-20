@@ -1,0 +1,10 @@
+# Node
+node_modules/
+dist/
+
+# Secrets — never commit this file to version control
+config.json
+
+# Misc
+.DS_Store
+*.log
