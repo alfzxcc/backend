@@ -10,32 +10,33 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true })); // Changed to true for better handling
 app.use(cookieParser());
 
-// ✅ CORS: Allow Vercel frontend + local development
+// ✅ CORS Configuration
 const allowedOrigins = [
   'http://localhost:4200',
   'http://localhost:4000',
-  process.env.FRONTEND_URL || ''
+  process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : ''
 ].filter(Boolean) as string[];
 
 app.use(cors({
   origin: function(origin, callback) {
     if (!origin) return callback(null, true);
-    
-    // Normalize the origin by removing a trailing slash if it exists
-    const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
-    
-    if (allowedOrigins.map(o => o.endsWith('/') ? o.slice(0, -1) : o).includes(normalizedOrigin)) {
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    if (allowedOrigins.includes(normalizedOrigin)) {
       callback(null, true);
     } else {
-      console.warn(`CORS blocked request from origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow OPTIONS
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
+
+// Important: Explicitly handle OPTIONS for all routes to prevent 404s
+app.options('*', cors());
 
 // Swagger docs
 setupSwagger(app);
@@ -50,13 +51,12 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use(errorHandler);
 
 // Start server
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT) || 4000;
 
 initialize()
   .then(() => {
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => { // Bind to 0.0.0.0 for Render
       console.log(`✅ Server running on port ${PORT}`);
-      console.log(`📖 Swagger docs: http://localhost:${PORT}/api-docs`);
     });
   })
   .catch(err => {
