@@ -10,7 +10,7 @@ interface SanityRegistrationPayload {
 }
 
 export async function logRegistrationToSanity(account: SanityRegistrationPayload) {
-  const { projectId, dataset, token } = config.sanity;
+  const { projectId, dataset, token } = configData.sanity;
   
   // Sanity HTTP API Mutations Endpoint URL
   const url = `https://${projectId}.api.sanity.io/v2026-05-20/data/mutate/${dataset}`;
