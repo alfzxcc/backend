@@ -4,35 +4,49 @@ import config from '../config.json';
 import { accountModel } from '../accounts/account.model';
 import { refreshTokenModel } from '../accounts/refresh-token.model';
 
-const configData = config as any; // ✅ Safely bypassing compiler schema checks
+const configData = config as any;
 const db: any = {};
 
 export async function initialize() {
-  // Use environment variables if they exist (on Render), otherwise fall back to configData properties
-  const host = process.env.DB_HOST || configData.database?.host;
-  const port = Number(process.env.DB_PORT) || configData.database?.port;
-  const user = process.env.DB_USER || configData.database?.user;
-  const password = process.env.DB_PASSWORD || configData.database?.password;
-  const database = process.env.DB_NAME || configData.database?.database;
+  // If a full connection string (DATABASE_URL) exists, use it. 
+  // Otherwise, use the individual environment variables.
+  const connectionString = process.env.DATABASE_URL;
 
-  // Create DB if not exists 
-  // Note: Hostinger usually doesn't allow creating databases via code, 
-  // but keeping this block safe with a try/catch prevents it from crashing your app.
-  try {
-    const connection = await mysql2.createConnection({ host, port, user, password });
-    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${database}\`;`);
-    await connection.end();
-  } catch (err) {
-    console.log("Database check/creation skipped or handled by host provider.");
+  let sequelize: Sequelize;
+
+  if (connectionString) {
+    // Use the full URL string (Best for Aiven)
+    sequelize = new Sequelize(connectionString, {
+      dialect: 'mysql',
+      logging: false,
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false // Required for most cloud DBs like Aiven
+        }
+      }
+    });
+  } else {
+    // Fallback to individual variables
+    const host = process.env.DB_HOST || configData.database?.host;
+    const port = Number(process.env.DB_PORT) || configData.database?.port;
+    const user = process.env.DB_USER || configData.database?.user;
+    const password = process.env.DB_PASSWORD || configData.database?.password;
+    const database = process.env.DB_NAME || configData.database?.database;
+
+    sequelize = new Sequelize(database, user, password, {
+      host,
+      port,
+      dialect: 'mysql',
+      logging: false,
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      }
+    });
   }
-
-  // Connect with Sequelize
-  const sequelize = new Sequelize(database, user, password, {
-    host,
-    port,
-    dialect: 'mysql',
-    logging: false
-  });
 
   // Init models
   db.Account = accountModel(sequelize);
@@ -42,7 +56,15 @@ export async function initialize() {
   db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
   db.RefreshToken.belongsTo(db.Account);
 
-  await sequelize.sync({ alter: true });
+  // Sync models
+  try {
+    await sequelize.authenticate();
+    console.log('Connection has been established successfully.');
+    await sequelize.sync({ alter: true });
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+    throw error;
+  }
 
   db.sequelize = sequelize;
 }
