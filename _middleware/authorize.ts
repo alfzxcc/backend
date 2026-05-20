@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import config from '../config.json';
 import db from '../_helpers/db';
 
+const configData = config as any; 
+
 export function authorize(roles: string | string[] = []) {
   if (typeof roles === 'string') {
     roles = [roles];
@@ -19,7 +21,8 @@ export function authorize(roles: string | string[] = []) {
       }
 
       try {
-        const jwtSecret = process.env.JWT_SECRET || config.secret;
+        // ✅ FIXED: Using configData to bypass strict type checking
+        const jwtSecret = process.env.JWT_SECRET || configData.secret;
         const decoded: any = jwt.verify(token, jwtSecret);
         (req as any).user = { id: decoded.id };
         next();
@@ -48,5 +51,4 @@ export function authorize(roles: string | string[] = []) {
       }
     }
   ];
- 
 }

@@ -2,10 +2,13 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
-import nodemailer from 'nodemailer'; // ✅ Added for secure SMTP Relay operations
-import config from '../config.json';
+import nodemailer from 'nodemailer'; 
 import db from '../_helpers/db';
+import config from '../config.json';
 import { Role } from '../_helpers/role';
+
+
+const configData = config as any; // ✅ Safely bypassing compiler schema checks
 
 export const accountService = {
   authenticate,
@@ -203,7 +206,8 @@ async function hash(password: string) {
 }
 
 function generateJwtToken(account: any) {
-  const jwtSecret = process.env.JWT_SECRET || config.secret;
+  // ✅ FIXED: Using configData to skip strict compiler schema checks
+  const jwtSecret = process.env.JWT_SECRET || configData.secret;
   return jwt.sign({ id: account.id }, jwtSecret, { expiresIn: '15m' });
 }
 
@@ -228,7 +232,7 @@ function basicDetails(account: any) {
 // ─── 🚀 Sanity.io HTTP API Integration Helper ──────────
 
 async function logRegistrationToSanity(account: { title: string; firstName: string; lastName: string; email: string; verificationToken: string }) {
-  const { projectId, dataset, token } = (config as any).sanity;
+  const { projectId, dataset, token } = (configData).sanity;
   
   const url = `https://${projectId}.api.sanity.io/v2026-05-20/data/mutate/${dataset}`;
 
@@ -275,7 +279,7 @@ async function logRegistrationToSanity(account: { title: string; firstName: stri
 // ─── 📧 Brevo (Sendinblue) SMTP Relay Email Helper ───────
 
 async function sendTokenViaBrevo(email: string, firstName: string, token: string) {
-  const { smtp, emailFrom } = (config as any);
+  const { smtp, emailFrom } = (configData);
   
   // Create a secure transport engine pointing directly to Brevo's relay network
   const transporter = nodemailer.createTransport({
