@@ -1,5 +1,7 @@
 import config from '../config.json';
 
+const configData = config as any;
+
 interface SanityRegistrationPayload {
   title: string;
   firstName: string;
