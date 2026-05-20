@@ -4,15 +4,16 @@ import config from '../config.json';
 import { accountModel } from '../accounts/account.model';
 import { refreshTokenModel } from '../accounts/refresh-token.model';
 
+const configData = config as any; // ✅ Safely bypassing compiler schema checks
 const db: any = {};
 
 export async function initialize() {
-  // Use environment variables if they exist (on Render), otherwise fall back to config.json (locally)
-  const host = process.env.DB_HOST || config.database.host;
-  const port = Number(process.env.DB_PORT) || config.database.port;
-  const user = process.env.DB_USER || config.database.user;
-  const password = process.env.DB_PASSWORD || config.database.password;
-  const database = process.env.DB_NAME || config.database.database;
+  // Use environment variables if they exist (on Render), otherwise fall back to configData properties
+  const host = process.env.DB_HOST || configData.database?.host;
+  const port = Number(process.env.DB_PORT) || configData.database?.port;
+  const user = process.env.DB_USER || configData.database?.user;
+  const password = process.env.DB_PASSWORD || configData.database?.password;
+  const database = process.env.DB_NAME || configData.database?.database;
 
   // Create DB if not exists 
   // Note: Hostinger usually doesn't allow creating databases via code, 
@@ -41,7 +42,6 @@ export async function initialize() {
   db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
   db.RefreshToken.belongsTo(db.Account);
 
-  
   await sequelize.sync({ alter: true });
 
   db.sequelize = sequelize;
