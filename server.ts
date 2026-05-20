@@ -18,14 +18,19 @@ const allowedOrigins = [
   'http://localhost:4200',
   'http://localhost:4000',
   process.env.FRONTEND_URL || ''
-].filter(Boolean);
+].filter(Boolean) as string[];
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, curl)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) return callback(null, true);
+    
+    // Normalize the origin by removing a trailing slash if it exists
+    const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+    
+    if (allowedOrigins.map(o => o.endsWith('/') ? o.slice(0, -1) : o).includes(normalizedOrigin)) {
       callback(null, true);
     } else {
+      console.warn(`CORS blocked request from origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
