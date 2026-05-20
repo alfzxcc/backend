@@ -21,18 +21,9 @@ const allowedOrigins = [
 ].filter(Boolean) as string[];
 
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
-    const normalizedOrigin = origin.replace(/\/$/, "");
-    if (allowedOrigins.includes(normalizedOrigin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow OPTIONS
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  origin: process.env.FRONTEND_URL,
+  credentials: true, // This MUST be true to work with withCredentials: true
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
 // Important: Explicitly handle OPTIONS for all routes to prevent 404s
