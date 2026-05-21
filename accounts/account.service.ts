@@ -83,11 +83,17 @@ async function register(params: any, origin: string) {
 }
 
 async function verifyEmail({ token }: any) {
-  const account = await db.Account.findOne({ where: { verificationToken: token } });
-  if (!account) throw 'Verification failed';
-  account.verified = new Date();
-  account.verificationToken = null;
-  await account.save();
+    console.log("Searching for token:", token); // Add this log
+    const account = await db.Account.findOne({ where: { verificationToken: token } });
+    
+    if (!account) {
+        console.log("No account found with this token!"); // Add this log
+        throw 'Verification failed';
+    }
+    
+    account.verified = new Date();
+    account.verificationToken = null;
+    await account.save();
 }
 
 // ─── Password Reset ────────────────────────────────────
