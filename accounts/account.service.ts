@@ -2,7 +2,6 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
-import nodemailer from 'nodemailer'; 
 import db from '../_helpers/db';
 import { Role } from '../_helpers/role';
 
@@ -241,30 +240,35 @@ async function logRegistrationToSanity(account: any) {
   }
 }
 
-// ─── 📧 Brevo SMTP Relay Email Helper ───────
+// ─── 📧 Brevo REST API Email Helper ───────
 
 async function sendTokenViaBrevo(email: string, firstName: string, token: string) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  });
+  const url = 'https://api.brevo.com/v3/smtp/email';
 
-  const mailOptions = {
-    from: `"SmartSync Admin" <${process.env.EMAIL_FROM}>`,
-    to: email,
+  const emailData = {
+    sender: { email: process.env.EMAIL_FROM, name: "SmartSync Admin" },
+    to: [{ email: email, name: firstName }],
     subject: "Verify Your Account Token",
-    html: `<div>Welcome, ${firstName}. Token: ${token}</div>`
+    htmlContent: `<div>Welcome, ${firstName}. Token: ${token}</div>`
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`📧 Email sent to ${email}`);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY! // Ensure this is in your Render Env
+      },
+      body: JSON.stringify(emailData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(JSON.stringify(errorData));
+    }
+    
+    console.log(`📧 Email successfully sent via REST API to ${email}`);
   } catch (error) {
-    console.error('❌ Brevo SMTP Relay Error:', error);
+    console.error('❌ Brevo REST API Error:', error);
   }
 }
