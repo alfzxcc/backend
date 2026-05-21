@@ -4,6 +4,8 @@ import { accountService } from './account.service';
 import { authorize } from '../_middleware/authorize';
 import { validateRequest } from '../_middleware/validate-request';
 import { Role } from '../_helpers/role';
+import { CookieOptions } from 'express';
+
 
 const router = express.Router();
 
@@ -230,10 +232,11 @@ function _delete(req: Request, res: Response, next: NextFunction) {
 // ─── Cookie Helper ─────────────────────────────────────
 
 function setTokenCookie(res: Response, token: string) {
-  const cookieOptions = {
+  const cookieOptions: CookieOptions = {
     httpOnly: true,
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    sameSite: 'lax' as const  // ✅ fixed: allows cookie to be sent with cross-origin requests
+    secure: true,      // Essential for sameSite: 'none'
+    sameSite: 'none'   // Explicitly allowed value for CookieOptions
   };
   res.cookie('refreshToken', token, cookieOptions);
 }
