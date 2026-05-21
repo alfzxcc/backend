@@ -86,19 +86,15 @@ async function register(params: any, origin: string) {
 
 
 async function verifyEmail({ token }) {
-    console.log("Searching for token:", token);
-    // 1. Hash the incoming token the same way you hashed it during registration
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    
-    // 2. Search for the hashed version
     const account = await db.Account.findOne({ where: { verificationToken: hashedToken } });
     
     if (!account) {
-        throw 'Verification failed';
+        throw 'Verification failed: Invalid token or already verified.';
     }
     
     account.verified = new Date();
-    account.verificationToken = null;
+    account.verificationToken = null; // Clear token after success
     await account.save();
 }
 
