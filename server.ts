@@ -6,6 +6,10 @@ import { setupSwagger } from './_helpers/swagger';
 import accountsController from './accounts/accounts.controller';
 
 const app = express();
+console.log("Check Env Vars:", { 
+  host: process.env.DB_HOST, 
+  project: process.env.SANITY_PROJECT_ID 
+});
 
 // Middleware
 app.use(express.json());
