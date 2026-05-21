@@ -60,17 +60,24 @@ async function revokeToken({ token, ipAddress }: any) {
   await refreshTokenObj.save();
 }
 
+// ... (imports and top-level definitions remain the same)
+
 async function register(params: any, origin: string) {
     const isFirstAccount = (await db.Account.count()) === 0;
     params.role = isFirstAccount ? Role.Admin : Role.User;
     
+    // 1. Generate the plain-text token
     const plainToken = randomTokenString();
+    
+    // 2. Hash the token for the database
     params.verificationToken = crypto.createHash('sha256').update(plainToken).digest('hex');
+    
     params.passwordHash = await hash(params.password);
     params.created = new Date();
 
     const account = await db.Account.create(params);
 
+    // 3. Sync with Sanity
     await logRegistrationToSanity({
         title: account.title,
         firstName: account.firstName,
@@ -79,24 +86,31 @@ async function register(params: any, origin: string) {
         verificationToken: plainToken 
     });
     
-    // Call the email sender here, inside the function
+    // 4. Send the PLAIN token via Email
     await sendTokenViaBrevo(account.email, account.firstName, plainToken);
 }
 
-
-
 async function verifyEmail({ token }) {
+    console.log("Searching for token:", token);
+    
+    // Hash the incoming token to match the database search
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    
+    // Search using the hashed version
     const account = await db.Account.findOne({ where: { verificationToken: hashedToken } });
     
     if (!account) {
-        throw 'Verification failed: Invalid token or already verified.';
+        throw 'Verification failed: The token is invalid or already used.';
     }
     
+    // Update account status
+    account.isVerified = true; // Ensure this matches your model field
     account.verified = new Date();
-    account.verificationToken = null; // Clear token after success
+    account.verificationToken = null; // Clear the token so it cannot be reused
     await account.save();
 }
+
+// ... (rest of the file remains the same)
 
 // ─── Password Reset ────────────────────────────────────
 
