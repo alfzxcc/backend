@@ -38,24 +38,21 @@ async function authenticate({ email, password, ipAddress }: any) {
 }
 
 async function refreshToken({ token, ipAddress }: any) {
-    // 1. Get the token, let getRefreshToken throw if invalid/not found
     const refreshTokenObj = await getRefreshToken(token);
     
-    // 2. Safely get the account
+    // You must fetch the account from the token object first
     const account = await refreshTokenObj.getAccount();
+    
     if (!account) {
-        throw 'Account associated with this refresh token was not found';
+        throw 'Account not found';
     }
 
-    // 3. Generate a new token
     const newRefreshToken = await generateRefreshToken(account, ipAddress);
     
-    // 4. Update the old token status
     refreshTokenObj.revoked = new Date();
     refreshTokenObj.revokedByIp = ipAddress;
     refreshTokenObj.replacedByToken = newRefreshToken.token;
     
-    // 5. Save changes
     await refreshTokenObj.save();
     await newRefreshToken.save();
 
