@@ -12,8 +12,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ✅ Centralized CORS Middleware
-app.use((req, res, next) => {
+// ✅ Centralized CORS Middleware/
+app.use((req, res, next) => {/////
     const origin = req.headers.origin;
     const allowedOrigins = [
         'http://localhost:4200',
