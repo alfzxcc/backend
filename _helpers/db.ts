@@ -5,43 +5,20 @@ import { refreshTokenModel } from '../accounts/refresh-token.model';
 const db: any = {};
 
 export async function initialize() {
-  // Use environment variables directly. 
-  // We prioritize individual variables if DATABASE_URL is not provided.
-  const connectionString = process.env.DATABASE_URL;
-
-  let sequelize: Sequelize;
-
-  if (connectionString) {
-    sequelize = new Sequelize(connectionString, {
+  // We use individual variables defined in Render Environment
+  // Hostinger typically does not require SSL.
+  const sequelize = new Sequelize(
+    process.env.DB_NAME!,
+    process.env.DB_USER!,
+    process.env.DB_PASSWORD!,
+    {
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT || 3306),
       dialect: 'mysql',
       logging: false,
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        }
-      }
-    });
-  } else {
-    // Fallback to individual variables defined in Render Environment
-    sequelize = new Sequelize(
-      process.env.DB_NAME!,
-      process.env.DB_USER!,
-      process.env.DB_PASSWORD!,
-      {
-        host: process.env.DB_HOST,
-        port: Number(process.env.DB_PORT),
-        dialect: 'mysql',
-        logging: false,
-        dialectOptions: {
-          ssl: {
-            require: true,
-            rejectUnauthorized: false
-          }
-        }
-      }
-    );
-  }
+      // Removed SSL block for Hostinger compatibility
+    }
+  );
 
   // Init models
   db.Account = accountModel(sequelize);
@@ -54,10 +31,10 @@ export async function initialize() {
   // Sync models
   try {
     await sequelize.authenticate();
-    console.log('Connection has been established successfully.');
+    console.log('✅ Connection to Hostinger database established successfully.');
     await sequelize.sync({ alter: true });
   } catch (error) {
-    console.error('Unable to connect to the database:', error);
+    console.error('❌ Unable to connect to the database:', error);
     throw error;
   }
 
