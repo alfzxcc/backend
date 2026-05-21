@@ -56,8 +56,8 @@ function registerSchema(req: Request, res: Response, next: NextFunction) {
 }
 
 function verifyEmailSchema(req: Request, res: Response, next: NextFunction) {
-  const schema = Joi.object({ token: Joi.string().required() });
-  validateRequest(req, next, schema);
+    const schema = Joi.object({ token: Joi.string().required() }); 
+    validateRequest(req, next, schema);
 }
 
 function forgotPasswordSchema(req: Request, res: Response, next: NextFunction) {
