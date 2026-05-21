@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ✅ Centralized CORS Middleware (Handles Preflight & Headers)
+// ✅ Centralized CORS Middleware
 app.use((req, res, next) => {
     const origin = req.headers.origin;
     const allowedOrigins = [
@@ -20,15 +20,19 @@ app.use((req, res, next) => {
         process.env.FRONTEND_URL?.replace(/\/$/, "")
     ];
 
+    // Check if the incoming request origin is in our allowed list
     if (origin && allowedOrigins.includes(origin)) {
         res.header('Access-Control-Allow-Origin', origin);
+    } else if (process.env.FRONTEND_URL) {
+        // Fallback: always allow the production URL
+        res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL.replace(/\/$/, ""));
     }
     
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
     res.header('Access-Control-Allow-Credentials', 'true');
 
-    // Handle preflight requests manually to avoid path-to-regexp errors
+    // Handle preflight requests manually
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }
