@@ -1,58 +1,77 @@
-import express from 'express';
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
-import { initialize } from './_helpers/db';
-import { errorHandler } from './_middleware/error-handler';
-import { setupSwagger } from './_helpers/swagger';
-import accountsController from './accounts/accounts.controller';
+  import express from 'express';
+  import cookieParser from 'cookie-parser';
+  import cors from 'cors';
+  import { initialize } from './_helpers/db';
+  import { errorHandler } from './_middleware/error-handler';
+  import { setupSwagger } from './_helpers/swagger';
+  import accountsController from './accounts/accounts.controller';
 
-const app = express();
+  const app = express();
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // Changed to true for better handling
-app.use(cookieParser());
+  // Middleware
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true })); // Changed to true for better handling
+  app.use(cookieParser());
 
-// ✅ CORS Configuration
-const allowedOrigins = [
-  'http://localhost:4200',
-  'http://localhost:4000',
-  process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : ''
-].filter(Boolean) as string[];
+  // ✅ CORS Configuration
+  const allowedOrigins = [
+    'http://localhost:4200',
+    'http://localhost:4000',
+    process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : ''
+  ].filter(Boolean) as string[];
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true, // This MUST be true to work with withCredentials: true
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-}));
+  // Add this middleware BEFORE your routes
+  app.use(cors({
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = [
+            'http://localhost:4200',
+            process.env.FRONTEND_URL?.replace(/\/$/, "")
+        ];
 
-// Important: Explicitly handle OPTIONS for all routes to prevent 404s
-app.options('*', cors());
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+  }));
 
-// Swagger docs
-setupSwagger(app);
+// 2. Ensure OPTIONS requests are explicitly handled
+  app.options('*', cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true
+  }));
 
-// Routes
-app.use('/accounts', accountsController);
+  // Swagger docs
+  setupSwagger(app);
 
-// Health check
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+  // Routes
+  app.use('/accounts', accountsController);
 
-// Global error handler
-app.use(errorHandler);
+  // Health check
+  app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-// Start server
-const PORT = Number(process.env.PORT) || 4000;
+  // Global error handler
+  app.use(errorHandler);
 
-initialize()
-  .then(() => {
-    app.listen(PORT, '0.0.0.0', () => { // Bind to 0.0.0.0 for Render
-      console.log(`✅ Server running on port ${PORT}`);
+  // Start server
+  const PORT = Number(process.env.PORT) || 4000;
+
+  initialize()
+    .then(() => {
+      app.listen(PORT, '0.0.0.0', () => { // Bind to 0.0.0.0 for Render
+        console.log(`✅ Server running on port ${PORT}`);
+      });
+    })
+    .catch(err => {
+      console.error('❌ Failed to start server:', err);
+      process.exit(1);
     });
-  })
-  .catch(err => {
-    console.error('❌ Failed to start server:', err);
-    process.exit(1);
-  });
 
-export default app;
+  export default app;
