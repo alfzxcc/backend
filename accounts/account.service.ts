@@ -243,21 +243,29 @@ async function logRegistrationToSanity(account: any) {
 // ─── 📧 Brevo REST API Email Helper ───────
 
 async function sendTokenViaBrevo(email: string, firstName: string, token: string) {
-  const url = 'https://api.brevo.com/v3/smtp/email';
+  const verifyUrl = `${process.env.FRONTEND_URL}/#/account/verify-email?token=${token}`;
+  // You must define the endpoint URL here
+  const url = 'https://api.brevo.com/v3/smtp/email'; 
 
   const emailData = {
     sender: { email: process.env.EMAIL_FROM, name: "SmartSync Admin" },
     to: [{ email: email, name: firstName }],
-    subject: "Verify Your Account Token",
-    htmlContent: `<div>Welcome, ${firstName}. Token: ${token}</div>`
+    subject: "Verify Your Account",
+    htmlContent: `
+      <div>
+        <p>Welcome, ${firstName}!</p>
+        <p>Please click the link below to verify your account:</p>
+        <a href="${verifyUrl}">Verify My Account</a>
+      </div>
+    `
   };
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(url, { // Now 'url' is defined
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'api-key': process.env.BREVO_API_KEY! // Ensure this is in your Render Env
+        'api-key': process.env.BREVO_API_KEY!
       },
       body: JSON.stringify(emailData)
     });
