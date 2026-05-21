@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { Op } from 'sequelize';
 import db from '../_helpers/db';
 import { Role } from '../_helpers/role';
@@ -60,34 +60,40 @@ async function revokeToken({ token, ipAddress }: any) {
   await refreshTokenObj.save();
 }
 
-// ─── Registration ──────────────────────────────────────
-
 async function register(params: any, origin: string) {
-  const isFirstAccount = (await db.Account.count()) === 0;
-  params.role = isFirstAccount ? Role.Admin : Role.User;
-  params.verificationToken = randomTokenString();
-  params.passwordHash = await hash(params.password);
-  params.created = new Date();
+    const isFirstAccount = (await db.Account.count()) === 0;
+    params.role = isFirstAccount ? Role.Admin : Role.User;
+    
+    const plainToken = randomTokenString();
+    params.verificationToken = crypto.createHash('sha256').update(plainToken).digest('hex');
+    params.passwordHash = await hash(params.password);
+    params.created = new Date();
 
-  const account = await db.Account.create(params);
+    const account = await db.Account.create(params);
 
-  await logRegistrationToSanity({
-    title: account.title,
-    firstName: account.firstName,
-    lastName: account.lastName,
-    email: account.email,
-    verificationToken: account.verificationToken
-  });
-
-  await sendTokenViaBrevo(account.email, account.firstName, account.verificationToken);
+    await logRegistrationToSanity({
+        title: account.title,
+        firstName: account.firstName,
+        lastName: account.lastName,
+        email: account.email,
+        verificationToken: plainToken 
+    });
+    
+    // Call the email sender here, inside the function
+    await sendTokenViaBrevo(account.email, account.firstName, plainToken);
 }
 
-async function verifyEmail({ token }: any) {
-    console.log("Searching for token:", token); // Add this log
-    const account = await db.Account.findOne({ where: { verificationToken: token } });
+
+
+async function verifyEmail({ token }) {
+    console.log("Searching for token:", token);
+    // 1. Hash the incoming token the same way you hashed it during registration
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    
+    // 2. Search for the hashed version
+    const account = await db.Account.findOne({ where: { verificationToken: hashedToken } });
     
     if (!account) {
-        console.log("No account found with this token!"); // Add this log
         throw 'Verification failed';
     }
     
