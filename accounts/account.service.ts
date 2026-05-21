@@ -38,19 +38,30 @@ async function authenticate({ email, password, ipAddress }: any) {
 }
 
 async function refreshToken({ token, ipAddress }: any) {
-  const refreshTokenObj = await getRefreshToken(token);
-  const account = await refreshTokenObj.getAccount();
+    // 1. Get the token, let getRefreshToken throw if invalid/not found
+    const refreshTokenObj = await getRefreshToken(token);
+    
+    // 2. Safely get the account
+    const account = await refreshTokenObj.getAccount();
+    if (!account) {
+        throw 'Account associated with this refresh token was not found';
+    }
 
-  const newRefreshToken = await generateRefreshToken(account, ipAddress);
-  refreshTokenObj.revoked = new Date();
-  refreshTokenObj.revokedByIp = ipAddress;
-  refreshTokenObj.replacedByToken = newRefreshToken.token;
-  await refreshTokenObj.save();
-  await newRefreshToken.save();
+    // 3. Generate a new token
+    const newRefreshToken = await generateRefreshToken(account, ipAddress);
+    
+    // 4. Update the old token status
+    refreshTokenObj.revoked = new Date();
+    refreshTokenObj.revokedByIp = ipAddress;
+    refreshTokenObj.replacedByToken = newRefreshToken.token;
+    
+    // 5. Save changes
+    await refreshTokenObj.save();
+    await newRefreshToken.save();
 
-  const jwtToken = generateJwtToken(account);
+    const jwtToken = generateJwtToken(account);
 
-  return { ...basicDetails(account), jwtToken, refreshToken: newRefreshToken.token };
+    return { ...basicDetails(account), jwtToken, refreshToken: newRefreshToken.token };
 }
 
 async function revokeToken({ token, ipAddress }: any) {
