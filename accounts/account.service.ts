@@ -128,6 +128,7 @@ async function forgotPassword({ email }: any, origin: string) {
   account.resetToken = randomTokenString();
   account.resetTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
   await account.save();
+  await sendResetPasswordViaBrevo(account.email, account.firstName, account.resetToken);
 }
 
 async function validateResetToken({ token }: any) {
@@ -308,5 +309,42 @@ async function sendTokenViaBrevo(email: string, firstName: string, token: string
     console.log(`📧 Email successfully sent via REST API to ${email}`);
   } catch (error) {
     console.error('❌ Brevo REST API Error:', error);
+  }
+}
+// ─── 📧 Reset Password Email via Brevo ───────
+async function sendResetPasswordViaBrevo(email: string, firstName: string, token: string) {
+  const resetUrl = `${process.env.FRONTEND_URL}/#/account/reset-password?token=${token}`;
+  const url = 'https://api.brevo.com/v3/smtp/email';
+
+  const emailData = {
+    sender: { email: process.env.EMAIL_FROM, name: "SmartSync Admin" },
+    to: [{ email: email, name: firstName }],
+    subject: "Reset Your Password",
+    htmlContent: `
+      <div>
+        <p>Hi ${firstName},</p>
+        <p>You requested a password reset. Click the link below to set a new password:</p>
+        <a href="${resetUrl}">Reset My Password</a>
+        <p>This link expires in 24 hours. If you did not request this, ignore this email.</p>
+      </div>
+    `
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY!
+      },
+      body: JSON.stringify(emailData)
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(JSON.stringify(errorData));
+    }
+    console.log(`📧 Reset password email sent to ${email}`);
+  } catch (error) {
+    console.error('❌ Brevo Reset Email Error:', error);
   }
 }
