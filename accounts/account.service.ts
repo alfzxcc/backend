@@ -213,7 +213,7 @@ async function hash(password: string) {
 
 function generateJwtToken(account: any) {
   const jwtSecret = process.env.JWT_SECRET || "fallback_secret_only_for_dev";
-  return jwt.sign({ id: account.id }, jwtSecret, { expiresIn: '15m' });
+  return jwt.sign({ id: account.id }, jwtSecret, { expiresIn: '24h' });
 }
 
 async function generateRefreshToken(account: any, ipAddress: string) {

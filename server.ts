@@ -16,29 +16,29 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ✅ Centralized CORS Middleware/
-app.use((req, res, next) => {/////
+// ✅ CORS Middleware — allows any vercel.app subdomain + localhost
+app.use((req, res, next) => {
     const origin = req.headers.origin;
-    const allowedOrigins = [
-        'http://localhost:4200',
-        'https://prcticefrontend.vercel.app',
-        'https://prcticefrontend-k9os2ipz0-alfzxccs-projects.vercel.app'
-    ];
 
-    // If the origin is in our list, allow it explicitly
-    if (origin && allowedOrigins.includes(origin)) {
+    const isAllowed = origin && (
+        origin === 'http://localhost:4200' ||
+        /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(origin)
+    );
+
+    if (isAllowed) {
         res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Credentials', 'true');
     }
-    
+
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
-    res.header('Access-Control-Allow-Credentials', 'true');
 
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }
     next();
 });
+
 // Swagger docs
 setupSwagger(app);
 
